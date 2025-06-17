@@ -5,13 +5,11 @@ fi
 
 export ZSH="$HOME/.oh-my-zsh"
 
-# ZSH_THEME="powerlevel10k/powerlevel10k"
-
 plugins=(git zsh-autosuggestions)
 
 source $ZSH/oh-my-zsh.sh
 
-# source $ZSH/custom/themes/powerlevel10k/powerlevel10k.zsh-theme 
+source $ZSH/custom/themes/powerlevel10k/powerlevel10k.zsh-theme 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 if [[ "$TERM_PROGRAM" == "iTerm.app" || -n "$ITERM_SESSION_ID" ]]; then
   ZSH_THEME="powerlevel10k/powerlevel10k"
