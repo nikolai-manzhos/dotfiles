@@ -9,9 +9,9 @@ plugins=(git zsh-autosuggestions)
 
 source $ZSH/oh-my-zsh.sh
 
-source $ZSH/custom/themes/powerlevel10k/powerlevel10k.zsh-theme 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 if [[ "$TERM_PROGRAM" == "iTerm.app" || -n "$ITERM_SESSION_ID" ]]; then
+  source $ZSH/custom/themes/powerlevel10k/powerlevel10k.zsh-theme
   ZSH_THEME="powerlevel10k/powerlevel10k"
   [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 else
