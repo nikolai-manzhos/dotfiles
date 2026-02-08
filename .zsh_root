@@ -1,2 +1,9 @@
-source .zsh_plugins
-source .zsh_p10k
+ZSH_ROOT_FILE="${${(%):-%N}:A}"
+ZSH_ROOT_DIR="${ZSH_ROOT_FILE:h}"
+
+source "$ZSH_ROOT_DIR/.zsh_plugins"
+source "$ZSH_ROOT_DIR/.zsh_p10k"
+
+if [[ ! -e "$HOME/.tmux.conf" && ! -L "$HOME/.tmux.conf" && -f "$ZSH_ROOT_DIR/.tmux.conf" ]]; then
+  ln -s "$ZSH_ROOT_DIR/.tmux.conf" "$HOME/.tmux.conf"
+fi
