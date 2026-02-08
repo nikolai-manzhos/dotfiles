@@ -10,7 +10,7 @@ source $ZSH/oh-my-zsh.sh
 if [[ "$TERM_PROGRAM" == "iTerm.app" || -n "$ITERM_SESSION_ID" ]]; then
   source $ZSH/custom/themes/powerlevel10k/powerlevel10k.zsh-theme
   ZSH_THEME="powerlevel10k/powerlevel10k"
-  [[ ! -f $PWD/.p10k.zsh ]] || source $PWD/.p10k.zsh
+  [[ ! -f $ZSH_ROOT_DIR/.p10k.zsh ]] || source $ZSH_ROOT_DIR/.p10k.zsh
 else
   PROMPT='%n@%m %1~ %# '
 fi
