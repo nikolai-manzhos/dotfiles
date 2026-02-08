@@ -1,0 +1,6 @@
+plugins=(git zsh-autosuggestions)
+
+bindkey "^]" history-beginning-search-backward
+bindkey "^[" history-beginning-search-forward
+bindkey '^\' autosuggest-accept
+
