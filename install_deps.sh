@@ -69,4 +69,4 @@ if [[ ! -d "$tpm_dir" ]]; then
   git clone --depth=1 https://github.com/tmux-plugins/tpm "$tpm_dir"
 fi
 
-printf 'Dependencies installed. Run ./sync.sh and then start tmux to install plugins.\n'
+printf 'Dependencies installed. Source .zsh_root from this repo (see README.md), then start tmux to install plugins.\n'

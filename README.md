@@ -10,33 +10,27 @@ macOS dotfiles for zsh (oh-my-zsh + powerlevel10k), tmux, and iTerm2.
 ./install_deps.sh
 ```
 
-2) Sync configs into your home directory:
+2) Zsh config (source directly from this repo):
+
+Add this to your `~/.zshrc` (set `DOTFILES_DIR` to your repo path):
 
 ```bash
-./sync.sh
+DOTFILES_DIR="$HOME/Projects/dotfiles"
+source "$DOTFILES_DIR/.zsh_root"
 ```
 
-3) Zsh config:
+Notes:
 
-- Ensure your `~/.zshrc` sources `~/.zsh_root` if you want to use the split config in this repo.
-- If you want `sync.sh` to copy `.zsh_root`, `.zsh_plugins`, and `.zsh_p10k`, add them to the script or copy them manually.
+- `.zsh_root` loads `.zsh_plugins` and `.zsh_p10k` from this repo.
+- `.zsh_root` will symlink `.tmux.conf` into `~/.tmux.conf` if it does not already exist.
+- `install_deps.sh` installs Meslo Nerd Font; set it in iTerm2 profiles for the prompt glyphs.
 
-Example snippet for `~/.zshrc`:
-
-```bash
-source "$HOME/.zsh_root"
-```
-
-4) iTerm2 preferences (optional, overwrites existing iTerm2 defaults):
+3) iTerm2 preferences (optional, overwrites existing iTerm2 defaults):
 
 ```bash
 defaults import com.googlecode.iterm2 iterm2/com.googlecode.iterm2.plist
 ```
 
-5) tmux plugins:
+4) tmux plugins:
 
 - Start tmux, then press `Ctrl-b` and `I` to install TPM plugins.
-
-## Notes
-
-- `install_deps.sh` installs Meslo Nerd Font; set it in iTerm2 profiles for the prompt glyphs.
