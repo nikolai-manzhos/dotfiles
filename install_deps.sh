@@ -37,6 +37,8 @@ install_formula zsh
 install_formula tmux
 install_formula zsh-autosuggestions
 install_formula powerlevel10k
+install_formula ripgrep
+install_formula fd
 
 install_cask iterm2
 install_cask font-meslo-lg-nerd-font
