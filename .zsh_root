@@ -4,6 +4,11 @@ ZSH_ROOT_DIR="${ZSH_ROOT_FILE:h}"
 source "$ZSH_ROOT_DIR/.zsh_plugins"
 source "$ZSH_ROOT_DIR/.zsh_p10k"
 
+# Custom keybindings must be after oh-my-zsh setup to survive bindkey -e
+bindkey "^]" history-beginning-search-backward
+bindkey "^[" history-beginning-search-forward
+bindkey '^\' autosuggest-accept
+
 if [[ ! -e "$HOME/.tmux.conf" && ! -L "$HOME/.tmux.conf" && -f "$ZSH_ROOT_DIR/.tmux.conf" ]]; then
   ln -s "$ZSH_ROOT_DIR/.tmux.conf" "$HOME/.tmux.conf"
 fi
