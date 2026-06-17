@@ -1,2 +1,2 @@
-plugins=(git zsh-autosuggestions)
+plugins=(git zsh-autosuggestions fzf-zsh-plugin fzf-tab)
 
