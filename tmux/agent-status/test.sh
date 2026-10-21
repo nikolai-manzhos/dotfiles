@@ -31,15 +31,17 @@ state() { t display -p -t "$1" '#{@agent_state}'; }
 set_state() { TMUX_PANE="$1" "$dir/agent-state.sh" "$2"; }
 render() { t display -p -t test:0 '#{E:@agent_status}' | sed 's/#\[[^]]*\]//g'; }
 
-# Window "api": an "agent" pane. Window "web": an "agent" pane and a pane at a shell prompt.
+# Window "api": an "agent" pane. Window "web": two "agent" panes around a pane at a shell prompt.
 t new-session -d -s test -n api -x 120 -y 40 'sleep 600'
 t new-window -d -t test:1 -n web 'sleep 600'
 t split-window -d -t test:1 'sh'
+t split-window -d -t test:1.1 'sleep 600'
 export TMUX="$(t display -p '#{socket_path}'),0,0"
 front="$(t display -p -t test:0.0 '#{pane_id}')"
 back="$(t display -p -t test:1.0 '#{pane_id}')"
 shell="$(t display -p -t test:1.1 '#{pane_id}')"
-# Terminal titles as Claude Code and opencode set them.
+side="$(t display -p -t test:1.2 '#{pane_id}')"
+# Terminal titles as Claude Code and opencode set them; $side keeps tmux's default.
 t select-pane -t "$front" -T '✳ fix-login-bug'
 t select-pane -t "$back" -T 'OC | Refactor parser'
 
@@ -88,10 +90,12 @@ check "rose-pine prepend section" '#{E:@agent_status}' "$(t show -gv @rose_pine_
 set_state "$front" working
 set_state "$back" waiting
 set_state "$shell" done
-check "renders window:session-name and skips shell panes" "api:fix-login-bug ● web:Refactor parser ✋ " "$(render)"
+set_state "$side" idle
+check "groups agents by window, skips shell panes, untitled panes as the pane number" \
+  "api: fix-login-bug ●  web: Refactor parser ✋ 2 ○" "$(render)"
 raw="$(t display -p -t test:0 '#{E:@agent_status}')"
 check "window names are iris" yes \
-  "$([[ "$raw" == *'#[fg=#c4a7e7]api#[fg=#908caa]:'*'#[fg=#c4a7e7]web#[fg=#908caa]:'* ]] && echo yes || echo no)"
+  "$([[ "$raw" == *'#[fg=#c4a7e7]api#[fg=#908caa]: '*'#[fg=#c4a7e7]web#[fg=#908caa]: '* ]] && echo yes || echo no)"
 check "the agent in the selected pane is gold" yes "$([[ "$raw" == *'#[fg=#f6c177]fix-login-bug '* ]] && echo yes || echo no)"
 check "agents in other panes are grey" yes "$([[ "$raw" == *'#[fg=#908caa]Refactor parser '* ]] && echo yes || echo no)"
 
@@ -100,14 +104,17 @@ set_state "$front" idle
 t select-pane -t "$front" -T '✳ Claude Code'
 t select-pane -t "$back" -T 'OC | Rewrite the whole status bar module'
 check "renders done and idle, unnamed sessions as the pane number, long names cut" \
-  "api:0 ○ web:Rewrite the whole st… ✓ " "$(render)"
+  "api: 0 ○  web: Rewrite the whole st… ✓ 2 ○" "$(render)"
+
+set_state "$front" clear
+check "windows without agents are left out" "web: Rewrite the whole st… ✓ 2 ○" "$(render)"
 
 t select-window -t test:1
 t select-pane -t "$back"
 check "focusing a done pane marks it seen" idle "$(state "$back")"
 
-set_state "$front" clear
 set_state "$back" clear
+set_state "$side" clear
 check "renders nothing without agents" "" "$(render)"
 
 printf '# install.sh\n'
