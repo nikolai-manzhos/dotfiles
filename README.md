@@ -34,3 +34,17 @@ defaults import com.googlecode.iterm2 iterm2/com.googlecode.iterm2.plist
 4) tmux plugins:
 
 - Start tmux, then press `Ctrl-b` and `I` to install TPM plugins.
+
+5) Agent status in tmux (optional):
+
+```bash
+./tmux/agent-status/install.sh
+tmux source ~/.tmux.conf
+```
+
+Shows `window:pane` (e.g. `android:1`) in the status bar for every pane running Claude Code: `●` working, `✋` waiting for you (permission prompt, question, failed run), `✓` finished but not looked at yet, `○` idle.
+
+- State is a tmux pane option (`@agent_state`) set by `tmux/agent-status/agent-state.sh` from Claude Code hooks; rendering is a plain tmux format, no polling.
+- `install.sh` adds hooks to `~/.claude/settings.json`. Safe to re-run; set `CLAUDE_CONFIG_DIR` to target another config dir.
+- Run `tmux/agent-status/test.sh` after changes.
+- Limitations: after pressing Esc in Claude Code, `●` stays until its 60s idle notification; only the current tmux session's windows are listed.
