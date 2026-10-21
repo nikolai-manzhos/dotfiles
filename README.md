@@ -44,6 +44,7 @@ tmux source ~/.tmux.conf
 
 Shows every pane running Claude Code or opencode (1.x and 2.x) in the status bar, grouped by window (e.g. `local: fix-login-bug ● 2 ○`), using the session name the agent puts in the terminal title (the pane number until the session is named): `●` working, `✋` waiting for you (permission prompt, question, failed run), `✓` finished but not looked at yet, `○` idle.
 
+- Click an agent to jump to its pane (needs `mouse on`); `agent-status.conf` binds `MouseDown1Status` for this and keeps tmux's default for other status clicks.
 - State is a tmux pane option (`@agent_state`) set by `tmux/agent-status/agent-state.sh` from Claude Code hooks and an opencode plugin; rendering is a plain tmux format, no polling.
 - `install.sh` adds hooks to `~/.claude/settings.json` and links the plugin into `~/.config/opencode/plugins`. Safe to re-run; set `CLAUDE_CONFIG_DIR` / `OPENCODE_CONFIG_DIR` to target other config dirs.
 - Run `tmux/agent-status/test.sh` after changes.

@@ -197,6 +197,56 @@ t select-window -t test:1
 t select-pane -t "$back"
 check "focusing a done pane marks it seen" idle "$(state "$back")"
 
+printf '# mouse clicks\n'
+if command -v python3 >/dev/null 2>&1; then
+  # Attaches a client on a pty and clicks the status line where $3 starts in $2,
+  # its plain text (no wide characters before $3).
+  cat >"$tmp/click" <<'EOF'
+import fcntl, os, pty, select, signal, struct, sys, termios, time
+socket, text, target = sys.argv[1:4]
+pid, fd = pty.fork()
+if pid == 0:
+    os.environ["TERM"] = "xterm-256color"
+    os.execvp("tmux", ["tmux", "-L", socket, "attach", "-t", "test"])
+fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 80, 0, 0))
+def drain(quiet):
+    end = time.time() + 3
+    while time.time() < end:
+        if not select.select([fd], [], [], quiet)[0]:
+            return
+        try:
+            os.read(fd, 65536)
+        except OSError:
+            return
+drain(0.3)
+col = text.index(target) + 1
+os.write(fd, f"\x1b[<0;{col};24M\x1b[<0;{col};24m".encode())
+drain(0.3)
+os.kill(pid, signal.SIGTERM)
+os.waitpid(pid, 0)
+EOF
+  # Only the agent status, after a window range to check other clicks still work.
+  t set -g mouse on
+  t set -g 'status-format[0]' '#[range=window|0]<<#[norange] #{E:@agent_status}'
+  status() { printf '<< %s' "$(render)"; }
+  click() { python3 "$tmp/click" "$socket" "$(status)" "$1"; }
+  where() { t display -p -t test '#{window_index}.#{pane_id}'; }
+
+  t select-pane -t "$side"
+  t select-window -t test:0
+  set_state "$back" done
+  click "Rewrite"
+  check "clicking an agent in another window switches to its pane" "1.$back" "$(where)"
+  check "clicking a done agent marks it seen" idle "$(state "$back")"
+  click "2 ○"
+  check "clicking an agent in the current window selects its pane" "1.$side" "$(where)"
+  t select-window -t test:1
+  click "<<"
+  check "other status ranges keep tmux's default click" "0.$front" "$(where)"
+else
+  printf 'skip python3 not found\n'
+fi
+
 set_state "$back" clear
 set_state "$side" clear
 check "renders nothing without agents" "" "$(render)"
