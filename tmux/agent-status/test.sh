@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Tests for agent-state.sh, agent-status.conf and install.sh.
+# Tests for agent-state.sh, agent-status.conf, install.sh and the opencode plugin.
 # Everything runs against a throwaway tmux server and temp dirs, so your real
-# tmux session and Claude Code config are never touched.
+# tmux session and agent configs are never touched.
 
 set -euo pipefail
 
@@ -101,7 +101,7 @@ check "renders nothing without agents" "" "$(render)"
 
 printf '# install.sh\n'
 settings="$tmp/claude/settings.json"
-mkdir -p "$tmp/claude"
+mkdir -p "$tmp/claude" "$tmp/opencode"
 cat >"$settings" <<'EOF'
 {
   "model": "opus",
@@ -113,7 +113,7 @@ cat >"$settings" <<'EOF'
 }
 EOF
 install() {
-  CLAUDE_CONFIG_DIR="$tmp/claude" "$dir/install.sh" >/dev/null
+  CLAUDE_CONFIG_DIR="$tmp/claude" OPENCODE_CONFIG_DIR="$tmp/opencode" "$dir/install.sh" >/dev/null
 }
 
 install
@@ -133,10 +133,32 @@ cmd="$(jq -r '.hooks.PermissionRequest[-1].hooks[0].command' "$settings")"
 TMUX_PANE="$back" sh -c "$cmd"
 check "installed hook command runs" waiting "$(state "$back")"
 
+check "opencode plugin file is linked" "$dir/opencode-agent-state.js" \
+  "$(readlink "$tmp/opencode/plugins/tmux-agent-state.js")"
+check "opencode 2.x TUI entry is linked" "$dir/opencode-agent-state.js" \
+  "$(readlink "$tmp/opencode/plugins/tmux-agent-state/tui.js")"
+
 cp "$settings" "$tmp/settings.first"
 install
 check "re-running leaves settings.json unchanged" same \
   "$(cmp -s "$settings" "$tmp/settings.first" && echo same || echo changed)"
+
+CLAUDE_CONFIG_DIR="$tmp/claude" OPENCODE_CONFIG_DIR="$tmp/missing" "$dir/install.sh" >/dev/null
+check "a missing opencode config dir is skipped" absent \
+  "$([[ -e "$tmp/missing" ]] && echo present || echo absent)"
+
+printf '# opencode plugin\n'
+if command -v node >/dev/null 2>&1; then
+  if node --test "$dir/opencode-agent-state.test.mjs" >"$tmp/node.log" 2>&1; then
+    printf 'ok   node --test opencode-agent-state.test.mjs\n'
+  else
+    cat "$tmp/node.log"
+    printf 'FAIL node --test opencode-agent-state.test.mjs\n'
+    failures=$((failures + 1))
+  fi
+else
+  printf 'skip node not found\n'
+fi
 
 if ((failures)); then
   printf '%d failed\n' "$failures"
