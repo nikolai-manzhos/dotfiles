@@ -13,6 +13,10 @@ failures=0
 t() { tmux -L "$socket" -f /dev/null "$@"; }
 
 cleanup() {
+  if [[ -n "${focused_pid:-}" ]]; then
+    kill "$focused_pid" 2>/dev/null || true
+    wait "$focused_pid" 2>/dev/null || true
+  fi
   t kill-server 2>/dev/null || true
   rm -rf "$tmp"
 }
@@ -154,20 +158,81 @@ interrupt "$tmp/new-session.jsonl"
 check "a transcript created after the prompt is watched" idle "$(wait_state "$agent" idle)"
 t kill-session -t turns
 
-# A control-mode client makes the session attached with window 0 in front.
-(sleep 30) | t -C attach -t test >/dev/null &
-for _ in 1 2 3 4 5 6 7 8 9 10; do
-  [[ "$(t display -p -t test '#{session_attached}')" == 1 ]] && break
-  sleep 0.1
-done
-set_state "$front" done
-check "done on the visible pane becomes idle" idle "$(state "$front")"
+focused_pid=""
+focused_hold=""
+if command -v python3 >/dev/null 2>&1; then
+  cat >"$tmp/focused-client" <<'EOF'
+import fcntl, os, pty, select, signal, struct, sys, termios, time
+socket, hold, focus = sys.argv[1:4]
+pid, fd = pty.fork()
+if pid == 0:
+    os.environ["TERM"] = "xterm-256color"
+    os.execvp("tmux", ["tmux", "-L", socket, "attach", "-t", "test"])
+fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 80, 0, 0))
+def drain(quiet):
+    end = time.time() + 3
+    while time.time() < end:
+        if not select.select([fd], [], [], quiet)[0]:
+            return
+        try:
+            os.read(fd, 65536)
+        except OSError:
+            return
+drain(0.3)
+os.write(fd, b"\x1b[I" if focus == "in" else b"\x1b[O")
+while os.path.exists(hold):
+    drain(0.1)
+try:
+    os.write(fd, b"\x1b[O")
+    os.kill(pid, signal.SIGTERM)
+    os.waitpid(pid, 0)
+except OSError:
+    pass
+EOF
+  t set -g focus-events on
+
+  # An attached client in a background terminal must not make completion seen.
+  focused_hold="$tmp/unfocused-client.hold"
+  touch "$focused_hold"
+  python3 "$tmp/focused-client" "$socket" "$focused_hold" out &
+  focused_pid=$!
+  for _ in $(seq 1 30); do
+    flags="$(t list-clients -F '#{client_flags}' 2>/dev/null || true)"
+    [[ -n "$flags" && "$flags" != *focused* ]] && break
+    sleep 0.1
+  done
+  set_state "$front" done
+  check "done on an attached but unfocused pane stays unseen" done "$(state "$front")"
+  rm -f "$focused_hold"
+  wait "$focused_pid"
+  focused_pid=""
+
+  # Keep a focused terminal client alive for the rendering and focus-hook tests.
+  focused_hold="$tmp/focused-client.hold"
+  touch "$focused_hold"
+  python3 "$tmp/focused-client" "$socket" "$focused_hold" in &
+  focused_pid=$!
+  for _ in $(seq 1 30); do
+    t list-clients -F '#{client_flags}' | grep -q focused && break
+    sleep 0.1
+  done
+  set_state "$front" done
+  check "done on a pane in a focused client becomes idle" idle "$(state "$front")"
+else
+  printf 'skip python3 not found; focused-client checks disabled\n'
+fi
+
 set_state "$back" done
 check "done on a background pane stays done" done "$(state "$back")"
 
 printf '# agent-status.conf\n'
+t set-hook -g pane-focus-in[7] 'set -g @other_focus_hook preserved'
 t source-file "$dir/agent-status.conf"
 check "rose-pine prepend section" '#{E:@agent_status}' "$(t show -gv @rose_pine_status_right_prepend_section)"
+check "keeps other pane-focus hooks" yes \
+  "$(t show-hooks -g pane-focus-in | grep -q '^pane-focus-in\[7\] ' && echo yes || echo no)"
+check "uses a stable pane-focus hook index" yes \
+  "$(t show-hooks -g pane-focus-in | grep -q '^pane-focus-in\[100\] ' && echo yes || echo no)"
 
 set_state "$front" working
 set_state "$back" waiting
@@ -195,7 +260,15 @@ check "windows without agents are left out" "web: Rewrite the whole st… ✓ 2 
 
 t select-window -t test:1
 t select-pane -t "$back"
-check "focusing a done pane marks it seen" idle "$(state "$back")"
+if [[ -n "$focused_pid" ]]; then
+  check "focusing a done pane marks it seen" idle "$(state "$back")"
+  check "other pane-focus hooks still run" preserved "$(t show -gv @other_focus_hook)"
+  rm -f "$focused_hold"
+  wait "$focused_pid"
+  focused_pid=""
+else
+  check "an unfocused pane-focus event keeps done unseen" done "$(state "$back")"
+fi
 
 printf '# mouse clicks\n'
 if command -v python3 >/dev/null 2>&1; then
@@ -260,7 +333,8 @@ cat >"$settings" <<'EOF'
   "hooks": {
     "Stop": [{ "hooks": [{ "type": "command", "command": "say done || true" }] }],
     "SessionStart": [{ "hooks": [{ "type": "command", "command": "bash ~/.claude/hooks/other-agent-state.sh session" }] }],
-    "PreToolUse": [{ "hooks": [{ "type": "command", "command": "audit-log", "async": true }] }]
+    "PreToolUse": [{ "hooks": [{ "type": "command", "command": "audit-log", "async": true }] }],
+    "PostToolUse": [{ "hooks": [{ "type": "command", "command": "\"/old/tmux/agent-status/agent-state.sh\" working" }] }]
   }
 }
 EOF
@@ -280,10 +354,17 @@ check "every hook from claude-hooks.json is installed" \
   "$(jq '[.[][].hooks[]] | length' "$dir/claude-hooks.json")" \
   "$(jq --arg s "$dir/agent-state.sh" '[.hooks[][].hooks[] | select(.command | contains($s))] | length' "$settings")"
 check "matchers are kept" "idle_prompt" "$(jq -r '.hooks.Notification[-1].matcher' "$settings")"
+check "Claude resumes working after the complete tool batch" "\"$dir/agent-state.sh\" working" \
+  "$(jq -r '.hooks.PostToolBatch[-1].hooks[0].command' "$settings")"
+check "per-tool completion cannot hide another pending prompt" 0 \
+  "$(jq '[.hooks.PostToolUse[]?.hooks[]? | select(.command | contains("tmux/agent-status/agent-state.sh"))] | length' "$settings")"
 
 cmd="$(jq -r '.hooks.PermissionRequest[-1].hooks[0].command' "$settings")"
 TMUX_PANE="$back" sh -c "$cmd"
 check "installed hook command runs" waiting "$(state "$back")"
+cmd="$(jq -r '.hooks.PostToolBatch[-1].hooks[0].command' "$settings")"
+TMUX_PANE="$back" sh -c "$cmd"
+check "complete tool batches clear waiting" working "$(state "$back")"
 
 check "opencode plugin file is linked" "$dir/opencode-agent-state.js" \
   "$(readlink "$tmp/opencode/plugins/tmux-agent-state.js")"

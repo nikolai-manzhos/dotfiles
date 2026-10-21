@@ -75,8 +75,9 @@ case "$1" in
     fi
     ;;
   done)
-    # Only mark the run as unseen when the pane isn't already in front of you.
-    tmux if -F -t "$pane" '#{&&:#{pane_active},#{&&:#{window_active},#{session_attached}}}' \
+    # Only mark the run as seen when the pane is in a focused tmux client. An
+    # attached client may still be in a background terminal window.
+    tmux if -F -t "$pane" '#{&&:#{pane_active},#{&&:#{window_active},#{&&:#{session_attached},#{m:*focused*,#{client_flags}}}}}' \
       "set -p -t $pane @agent_state idle" \
       "set -p -t $pane @agent_state done" \; $end_turn
     ;;

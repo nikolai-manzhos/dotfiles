@@ -5,7 +5,7 @@
   "UserPromptSubmit": [
     { "hooks": [{ "type": "command", "command": "agent-state.sh prompt", "timeout": 5 }] }
   ],
-  "PostToolUse": [
+  "PostToolBatch": [
     { "hooks": [{ "type": "command", "command": "agent-state.sh working", "timeout": 5 }] }
   ],
   "PreToolUse": [
