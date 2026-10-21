@@ -178,8 +178,10 @@ check "groups agents by window, skips shell panes, untitled panes as the pane nu
 raw="$(t display -p -t test:0 '#{E:@agent_status}')"
 check "window names are iris" yes \
   "$([[ "$raw" == *'#[fg=#c4a7e7]api#[fg=#908caa]: '*'#[fg=#c4a7e7]web#[fg=#908caa]: '* ]] && echo yes || echo no)"
-check "the agent in the selected pane is gold" yes "$([[ "$raw" == *'#[fg=#f6c177]fix-login-bug '* ]] && echo yes || echo no)"
-check "agents in other panes are grey" yes "$([[ "$raw" == *'#[fg=#908caa]Refactor parser '* ]] && echo yes || echo no)"
+check "the agent in the selected pane is bold white" yes "$([[ "$raw" == *'#[fg=#e0def4 bold]fix-login-bug#[nobold] '* ]] && echo yes || echo no)"
+check "the selected agent's colour differs from the working glyph" yes \
+  "$([[ "$raw" == *'#[nobold] #[fg=#f6c177]●'* && "$raw" != *'#[fg=#f6c177]fix-login-bug'* ]] && echo yes || echo no)"
+check "agents in other panes are grey and not bold" yes "$([[ "$raw" == *'#[fg=#908caa]Refactor parser#[nobold] '* ]] && echo yes || echo no)"
 
 set_state "$back" done
 set_state "$front" idle
