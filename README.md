@@ -47,4 +47,5 @@ Shows every pane running Claude Code or opencode (1.x and 2.x) in the status bar
 - State is a tmux pane option (`@agent_state`) set by `tmux/agent-status/agent-state.sh` from Claude Code hooks and an opencode plugin; rendering is a plain tmux format, no polling.
 - `install.sh` adds hooks to `~/.claude/settings.json` and links the plugin into `~/.config/opencode/plugins`. Safe to re-run; set `CLAUDE_CONFIG_DIR` / `OPENCODE_CONFIG_DIR` to target other config dirs.
 - Run `tmux/agent-status/test.sh` after changes.
-- Limitations: after pressing Esc in Claude Code, `●` stays until its 60s idle notification; only the current tmux session's windows are listed; opencode 2.x tracks the session shown in that pane's TUI.
+- Claude Code runs no hook when you press Esc, so while it works a small background loop checks once a second for its "interrupted" transcript entry, or for a screen that stopped changing (its spinner stops when you cancel before it replies); the loop exits when the turn ends.
+- Limitations: only the current tmux session's windows are listed; opencode 2.x tracks the session shown in that pane's TUI.

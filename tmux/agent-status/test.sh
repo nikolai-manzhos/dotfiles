@@ -28,7 +28,24 @@ check() {
 }
 
 state() { t display -p -t "$1" '#{@agent_state}'; }
+turn() { t display -p -t "$1" '#{@agent_turn}'; }
 set_state() { TMUX_PANE="$1" "$dir/agent-state.sh" "$2"; }
+
+# The interrupt watcher polls once a second, so allow it a few seconds.
+wait_state() {
+  for _ in $(seq 1 $((${3:-4} * 10))); do
+    [[ "$(state "$1")" == "$2" ]] && break
+    sleep 0.1
+  done
+  state "$1"
+}
+prompt() {
+  printf '{"session_id":"s1","transcript_path":"%s","hook_event_name":"UserPromptSubmit"}\n' "$2" |
+    set_state "$1" prompt
+}
+interrupt() {
+  printf '%s\n' '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"[Request interrupted by user]"}]}}' >>"$1"
+}
 render() { t display -p -t test:0 '#{E:@agent_status}' | sed 's/#\[[^]]*\]//g'; }
 
 # Window "api": an "agent" pane. Window "web": two "agent" panes around a pane at a shell prompt.
@@ -71,6 +88,71 @@ check "no-op outside tmux" idle "$(state "$back")"
 
 set_state "$back" clear
 check "clear unsets @agent_state" "" "$(state "$back")"
+
+printf '# interrupts\n'
+# Stands in for Claude Code's spinner: the screen changes while the flag file exists.
+cat >"$tmp/spinner" <<'EOF'
+#!/bin/sh
+i=0
+while :; do
+  if [ -e "$1" ]; then i=$((i + 1)); printf '\r%s' "$i"; fi
+  sleep 0.2
+done
+EOF
+chmod +x "$tmp/spinner"
+spinning="$tmp/spinning"
+touch "$spinning"
+t new-session -d -s turns -x 80 -y 10 "$tmp/spinner" "$spinning"
+agent="$(t display -p -t turns:0.0 '#{pane_id}')"
+
+transcript="$tmp/session.jsonl"
+interrupt "$transcript" # from an earlier turn
+prompt "$agent" "$transcript"
+check "prompt sets working" working "$(state "$agent")"
+check "prompt starts a turn" yes "$([[ -n "$(turn "$agent")" ]] && echo yes || echo no)"
+cat >>"$transcript" <<'EOF'
+{"type":"api-request-blob","messages":[{"role":"user","content":[{"type":"text","text":"[Request interrupted by user]\n"},{"type":"text","text":"next prompt"}]}]}
+{"type":"assistant","message":{"content":[{"type":"text","text":"Esc writes [Request interrupted by user] to the transcript"},{"type":"tool_use","input":{"command":"grep -F '\"text\":\"[Request interrupted by user' t.jsonl"}}]}}
+EOF
+sleep 4
+check "a busy screen, earlier interrupts, logged requests and mentions keep it working" working "$(state "$agent")"
+interrupt "$transcript"
+check "an interrupt sets idle" idle "$(wait_state "$agent" idle)"
+check "an interrupt ends the turn" "" "$(turn "$agent")"
+
+prompt "$agent" "$transcript"
+rm "$spinning"
+check "a screen that stops changing (cancelled before replying) sets idle" idle "$(wait_state "$agent" idle 8)"
+check "a still screen ends the turn" "" "$(turn "$agent")"
+
+prompt "$agent" "$transcript"
+set_state "$agent" waiting
+sleep 4.5
+check "a still screen at a permission prompt stays waiting" waiting "$(state "$agent")"
+interrupt "$transcript"
+check "an interrupt at a permission prompt or question sets idle" idle "$(wait_state "$agent" idle)"
+touch "$spinning"
+
+prompt "$agent" "$transcript"
+set_state "$agent" done
+check "done ends the turn" "" "$(turn "$agent")"
+interrupt "$transcript"
+sleep 1.5
+check "interrupts after the turn ended are ignored" done "$(state "$agent")"
+
+prompt "$agent" "$transcript"
+set_state "$agent" failed
+check "failed sets waiting and ends the turn" "waiting:" "$(state "$agent"):$(turn "$agent")"
+
+prompt "$agent" "$transcript"
+set_state "$agent" clear
+check "clear ends the turn" "" "$(turn "$agent")"
+
+prompt "$agent" "$tmp/new-session.jsonl"
+sleep 1.2
+interrupt "$tmp/new-session.jsonl"
+check "a transcript created after the prompt is watched" idle "$(wait_state "$agent" idle)"
+t kill-session -t turns
 
 # A control-mode client makes the session attached with window 0 in front.
 (sleep 30) | t -C attach -t test >/dev/null &

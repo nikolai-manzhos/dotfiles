@@ -3,7 +3,7 @@
     { "hooks": [{ "type": "command", "command": "agent-state.sh idle", "timeout": 5 }] }
   ],
   "UserPromptSubmit": [
-    { "hooks": [{ "type": "command", "command": "agent-state.sh working", "timeout": 5 }] }
+    { "hooks": [{ "type": "command", "command": "agent-state.sh prompt", "timeout": 5 }] }
   ],
   "PostToolUse": [
     { "hooks": [{ "type": "command", "command": "agent-state.sh working", "timeout": 5 }] }
@@ -31,7 +31,7 @@
     { "hooks": [{ "type": "command", "command": "agent-state.sh done", "timeout": 5 }] }
   ],
   "StopFailure": [
-    { "hooks": [{ "type": "command", "command": "agent-state.sh waiting", "timeout": 5 }] }
+    { "hooks": [{ "type": "command", "command": "agent-state.sh failed", "timeout": 5 }] }
   ],
   "SessionEnd": [
     { "hooks": [{ "type": "command", "command": "agent-state.sh clear", "timeout": 5 }] }
