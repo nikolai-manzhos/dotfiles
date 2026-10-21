@@ -39,6 +39,9 @@ export TMUX="$(t display -p '#{socket_path}'),0,0"
 front="$(t display -p -t test:0.0 '#{pane_id}')"
 back="$(t display -p -t test:1.0 '#{pane_id}')"
 shell="$(t display -p -t test:1.1 '#{pane_id}')"
+# Terminal titles as Claude Code and opencode set them.
+t select-pane -t "$front" -T '✳ fix-login-bug'
+t select-pane -t "$back" -T 'OC | Refactor parser'
 
 printf '# agent-state.sh\n'
 for s in idle working waiting; do
@@ -85,11 +88,14 @@ check "rose-pine prepend section" '#{E:@agent_status}' "$(t show -gv @rose_pine_
 set_state "$front" working
 set_state "$back" waiting
 set_state "$shell" done
-check "renders agent panes as window:pane and skips shell panes" "api:0 ● web:0 ✋ " "$(render)"
+check "renders window:session-name and skips shell panes" "api:fix-login-bug ● web:Refactor parser ✋ " "$(render)"
 
 set_state "$back" done
 set_state "$front" idle
-check "renders done and idle" "api:0 ○ web:0 ✓ " "$(render)"
+t select-pane -t "$front" -T '✳ Claude Code'
+t select-pane -t "$back" -T 'OC | Rewrite the whole status bar module'
+check "renders done and idle, unnamed sessions as the pane number, long names cut" \
+  "api:0 ○ web:Rewrite the whole st… ✓ " "$(render)"
 
 t select-window -t test:1
 t select-pane -t "$back"

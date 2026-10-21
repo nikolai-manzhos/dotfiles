@@ -42,7 +42,7 @@ defaults import com.googlecode.iterm2 iterm2/com.googlecode.iterm2.plist
 tmux source ~/.tmux.conf
 ```
 
-Shows `window:pane` (e.g. `android:1`) in the status bar for every pane running Claude Code or opencode (1.x and 2.x): `●` working, `✋` waiting for you (permission prompt, question, failed run), `✓` finished but not looked at yet, `○` idle.
+Shows `window:session` (e.g. `local:fix-login-bug`) in the status bar for every pane running Claude Code or opencode (1.x and 2.x), using the session name the agent puts in the terminal title (the pane number until the session is named): `●` working, `✋` waiting for you (permission prompt, question, failed run), `✓` finished but not looked at yet, `○` idle.
 
 - State is a tmux pane option (`@agent_state`) set by `tmux/agent-status/agent-state.sh` from Claude Code hooks and an opencode plugin; rendering is a plain tmux format, no polling.
 - `install.sh` adds hooks to `~/.claude/settings.json` and links the plugin into `~/.config/opencode/plugins`. Safe to re-run; set `CLAUDE_CONFIG_DIR` / `OPENCODE_CONFIG_DIR` to target other config dirs.
