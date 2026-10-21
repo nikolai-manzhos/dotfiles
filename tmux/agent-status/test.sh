@@ -89,6 +89,11 @@ set_state "$front" working
 set_state "$back" waiting
 set_state "$shell" done
 check "renders window:session-name and skips shell panes" "api:fix-login-bug ● web:Refactor parser ✋ " "$(render)"
+raw="$(t display -p -t test:0 '#{E:@agent_status}')"
+check "window names are iris" yes \
+  "$([[ "$raw" == *'#[fg=#c4a7e7]api#[fg=#908caa]:'*'#[fg=#c4a7e7]web#[fg=#908caa]:'* ]] && echo yes || echo no)"
+check "the agent in the selected pane is gold" yes "$([[ "$raw" == *'#[fg=#f6c177]fix-login-bug '* ]] && echo yes || echo no)"
+check "agents in other panes are grey" yes "$([[ "$raw" == *'#[fg=#908caa]Refactor parser '* ]] && echo yes || echo no)"
 
 set_state "$back" done
 set_state "$front" idle
