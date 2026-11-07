@@ -24,7 +24,6 @@ set_state "$shell" done
 set_state "$side" idle
 check "groups agents by window and skips shell panes" \
   "api ● fix-login-bug │ web ! Refactor parser · ○ p2" "$(render)"
-check "tracks the visible agent count" "3" "$(t show -v -t test @agent_count)"
 
 raw="$(t display -p -t test:0 '#{E:@agent_status}')"
 check "window names are bold iris" yes \
@@ -46,7 +45,29 @@ check "renders states, pane numbers, and truncated names" \
 set_state "$front" clear
 check "widens names when fewer agents are visible" \
   "web ✓ Rewrite the whole status… · ○ p2" "$(render)"
-check "updates the visible agent count" "2" "$(t show -v -t test @agent_count)"
+
+# An agent can exit back to its shell without calling the state hook. Its
+# lingering @agent_state must not keep the other names at the narrower tier.
+t select-pane -t "$shell" -T 'OC | Temporary agent'
+t send-keys -t "$shell" 'sleep 60' Enter
+for _ in {1..30}; do
+  [[ "$(t display -p -t "$shell" '#{pane_current_command}')" == sleep ]] && break
+  sleep 0.1
+done
+check "agent process is running in the shell pane" sleep \
+  "$(t display -p -t "$shell" '#{pane_current_command}')"
+t set -p -t "$shell" @agent_state working
+check "running agent narrows other labels" \
+  "web ✓ Rewrite the whol… · ● Temporary agent · ○ p2" "$(render)"
+t send-keys -t "$shell" C-c
+for _ in {1..30}; do
+  [[ "$(t display -p -t "$shell" '#{pane_current_command}')" == *sh ]] && break
+  sleep 0.1
+done
+check "agent returned to its shell without a hook" yes \
+  "$([[ "$(t display -p -t "$shell" '#{pane_current_command}')" == *sh && "$(state "$shell")" == working ]] && echo yes || echo no)"
+check "exited agent is hidden and other labels widen immediately" \
+  "web ✓ Rewrite the whole status… · ○ p2" "$(render)"
 
 t select-pane -t "$back" -T 'OpenCode'
 check "uses the agent kind before a session is named" \
