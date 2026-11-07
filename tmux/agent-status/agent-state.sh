@@ -94,4 +94,10 @@ case "$1" in
     ;;
 esac 2>/dev/null
 
+# Keep a session-level count so the status format can choose a responsive name
+# width without nesting a second pane loop inside the renderer's pane loop.
+tmux set -t "$pane" -F @agent_count \
+  '#{n:#{W:#{P:#{?#{@agent_state},#{?#{m:*sh,#{pane_current_command}},,1},}}}}' \
+  2>/dev/null
+
 exit 0

@@ -23,27 +23,35 @@ set_state "$back" waiting
 set_state "$shell" done
 set_state "$side" idle
 check "groups agents by window and skips shell panes" \
-  "api: fix-login-bug ●  web: Refactor parser ✋ 2 ○" "$(render)"
+  "api ● fix-login-bug │ web ! Refactor parser · ○ p2" "$(render)"
+check "tracks the visible agent count" "3" "$(t show -v -t test @agent_count)"
 
 raw="$(t display -p -t test:0 '#{E:@agent_status}')"
-check "window names are iris" yes \
-  "$([[ "$raw" == *'#[fg=#c4a7e7]api#[fg=#908caa]: '*'#[fg=#c4a7e7]web#[fg=#908caa]: '* ]] && echo yes || echo no)"
+check "window names are bold iris" yes \
+  "$([[ "$raw" == *'#[fg=#c4a7e7 bold]api#[nobold] '*'#[fg=#c4a7e7 bold]web#[nobold] '* ]] && echo yes || echo no)"
 check "the selected agent is bold white" yes \
-  "$([[ "$raw" == *'#[fg=#e0def4 bold]fix-login-bug#[nobold] '* ]] && echo yes || echo no)"
+  "$([[ "$raw" == *'#[fg=#e0def4 bold]fix-login-bug#[nobold]'* ]] && echo yes || echo no)"
 check "the selected agent differs from the working glyph" yes \
-  "$([[ "$raw" == *'#[nobold] #[fg=#f6c177]●'* && "$raw" != *'#[fg=#f6c177]fix-login-bug'* ]] && echo yes || echo no)"
-check "agents in other panes are grey and not bold" yes \
-  "$([[ "$raw" == *'#[fg=#908caa]Refactor parser#[nobold] '* ]] && echo yes || echo no)"
+  "$([[ "$raw" == *'#[fg=#f6c177 bold]●#[nobold] #[fg=#e0def4 bold]fix-login-bug'* && "$raw" != *'#[fg=#f6c177 bold]fix-login-bug'* ]] && echo yes || echo no)"
+check "agents in other panes are high contrast and not bold" yes \
+  "$([[ "$raw" == *'#[fg=#e0def4]Refactor parser#[nobold]'* ]] && echo yes || echo no)"
 
 set_state "$back" done
 set_state "$front" idle
 t select-pane -t "$front" -T '✳ Claude Code'
 t select-pane -t "$back" -T 'OC | Rewrite the whole status bar module'
 check "renders states, pane numbers, and truncated names" \
-  "api: 0 ○  web: Rewrite the whole st… ✓ 2 ○" "$(render)"
+  "api ○ claude │ web ✓ Rewrite the whol… · ○ p2" "$(render)"
 
 set_state "$front" clear
-check "leaves out windows without agents" "web: Rewrite the whole st… ✓ 2 ○" "$(render)"
+check "widens names when fewer agents are visible" \
+  "web ✓ Rewrite the whole status… · ○ p2" "$(render)"
+check "updates the visible agent count" "2" "$(t show -v -t test @agent_count)"
+
+t select-pane -t "$back" -T 'OpenCode'
+check "uses the agent kind before a session is named" \
+  "web ✓ opencode · ○ p2" "$(render)"
+t select-pane -t "$back" -T 'OC | Rewrite the whole status bar module'
 
 if command -v python3 >/dev/null 2>&1; then
   start_tmux_client focused
@@ -65,7 +73,7 @@ if command -v python3 >/dev/null 2>&1; then
   click_status "$(status)" "Rewrite"
   check "clicking another window's agent switches panes" "1.$back" "$(where)"
   check "clicking a done agent marks it seen" idle "$(state "$back")"
-  click_status "$(status)" "2 ○"
+  click_status "$(status)" "○ p2"
   check "clicking this window's agent switches panes" "1.$side" "$(where)"
   t select-window -t test:1
   click_status "$(status)" "<<"
