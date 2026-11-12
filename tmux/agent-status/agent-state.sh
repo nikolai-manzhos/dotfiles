@@ -4,7 +4,13 @@
 # Called by Claude Code hooks and the opencode plugin.
 #
 # Usage: agent-state.sh idle|working|waiting|done|failed|settle|clear
-#        agent-state.sh prompt   (Claude Code UserPromptSubmit; hook JSON on stdin)
+#        agent-state.sh prompt   (Claude Code UserPromptSubmit or /compact's
+#                                 PreCompact; hook JSON on stdin)
+#
+# Claude Code also runs SessionStart hooks after every compaction, including
+# automatic ones mid-turn or while idle, so claude-hooks.json leaves the state
+# alone then and tracks only /compact (trigger "manual") like a prompt. Print
+# nothing: Claude Code adds PreCompact output to the compaction instructions.
 
 [ -n "$TMUX_PANE" ] || exit 0
 

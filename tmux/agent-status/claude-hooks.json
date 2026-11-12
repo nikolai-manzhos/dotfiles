@@ -1,6 +1,9 @@
 {
   "SessionStart": [
-    { "hooks": [{ "type": "command", "command": "agent-state.sh idle", "timeout": 5 }] }
+    {
+      "matcher": "startup|resume|clear|fork",
+      "hooks": [{ "type": "command", "command": "agent-state.sh idle", "timeout": 5 }]
+    }
   ],
   "UserPromptSubmit": [
     { "hooks": [{ "type": "command", "command": "agent-state.sh prompt", "timeout": 5 }] }
@@ -25,6 +28,18 @@
     {
       "matcher": "idle_prompt",
       "hooks": [{ "type": "command", "command": "agent-state.sh settle", "timeout": 5 }]
+    }
+  ],
+  "PreCompact": [
+    {
+      "matcher": "manual",
+      "hooks": [{ "type": "command", "command": "agent-state.sh prompt", "timeout": 5 }]
+    }
+  ],
+  "PostCompact": [
+    {
+      "matcher": "manual",
+      "hooks": [{ "type": "command", "command": "agent-state.sh done", "timeout": 5 }]
     }
   ],
   "Stop": [

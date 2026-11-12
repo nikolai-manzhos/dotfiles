@@ -79,6 +79,39 @@ interrupt() {
   printf '%s\n' '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"[Request interrupted by user]"}]}}' >>"$1"
 }
 
+# Stand in for Claude Code's spinner in session "turns" (pane $agent): the
+# screen changes while the file $spinning exists.
+start_spinner() {
+  cat >"$tmp/spinner" <<'EOF'
+#!/bin/sh
+i=0
+while :; do
+  if [ -e "$1" ]; then i=$((i + 1)); printf '\r%s' "$i"; fi
+  sleep 0.2
+done
+EOF
+  chmod +x "$tmp/spinner"
+  spinning="$tmp/spinning"
+  touch "$spinning"
+  t new-session -d -s turns -x 80 -y 10 "$tmp/spinner" "$spinning"
+  agent="$(t display -p -t turns:0.0 '#{pane_id}')"
+}
+
+# Runs the claude-hooks.json commands for a Claude Code event in a pane, with
+# hook JSON on stdin. A matcher of plain names lists exact values to match
+# against the event's query (tool name, SessionStart source, compact trigger).
+fire() {
+  local event="$1" query="$2" pane="$3" command
+  local input="{\"session_id\":\"s1\",\"transcript_path\":\"${4:-}\",\"hook_event_name\":\"$event\"}"
+  jq -r --arg event "$event" --arg query "$query" --arg script "\"$root/agent-state.sh\"" '
+    .[$event] // [] | .[]
+    | select((.matcher // "") == "" or (.matcher | split("|") | any(. == $query)))
+    | .hooks[].command | sub("^agent-state\\.sh"; $script)' "$root/claude-hooks.json" |
+    while IFS= read -r command; do
+      printf '%s\n' "$input" | TMUX_PANE="$pane" sh -c "$command"
+    done
+}
+
 start_tmux_client() {
   local focus="$1"
   local flags=""

@@ -30,4 +30,5 @@ Shows every pane running Claude Code or opencode (1.x and 2.x) in the status bar
 - `setup.sh` adds hooks to `~/.claude/settings.json` and links the plugin into `~/.config/opencode/plugins`. Set `CLAUDE_CONFIG_DIR` / `OPENCODE_CONFIG_DIR` to target other config dirs.
 - Run `tmux/agent-status/test.sh` after changes.
 - Claude Code runs no hook when you press Esc, so while it works a small background loop checks once a second for its "interrupted" transcript entry, or for a screen that stopped changing (its spinner stops when you cancel before it replies); the loop exits when the turn ends.
+- Compaction keeps the current state: Claude Code also runs its `SessionStart` hook after automatic compaction (mid-turn or while idle), so that hook only resets the state for new, resumed, cleared or forked sessions. `/compact` shows as working, then done.
 - Limitations: only the current tmux session's windows are listed; opencode 2.x tracks the session shown in that pane's TUI.

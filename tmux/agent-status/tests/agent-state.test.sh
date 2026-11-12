@@ -31,20 +31,7 @@ check "no-op outside tmux" idle "$(state "$back")"
 set_state "$back" clear
 check "clear unsets @agent_state" "" "$(state "$back")"
 
-# Stand in for Claude Code's spinner: change the screen while the flag exists.
-cat >"$tmp/spinner" <<'EOF'
-#!/bin/sh
-i=0
-while :; do
-  if [ -e "$1" ]; then i=$((i + 1)); printf '\r%s' "$i"; fi
-  sleep 0.2
-done
-EOF
-chmod +x "$tmp/spinner"
-spinning="$tmp/spinning"
-touch "$spinning"
-t new-session -d -s turns -x 80 -y 10 "$tmp/spinner" "$spinning"
-agent="$(t display -p -t turns:0.0 '#{pane_id}')"
+start_spinner
 
 transcript="$tmp/session.jsonl"
 interrupt "$transcript" # An interrupt from an earlier turn must be ignored.
